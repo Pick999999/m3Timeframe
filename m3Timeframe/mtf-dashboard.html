@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MTF Trading Strategy Dashboard</title>
+    <script src="https://unpkg.com/lightweight-charts@4.2.1/dist/lightweight-charts.standalone.production.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gpu.js@latest/dist/gpu-browser.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0e27;
+            color: #e0e0e0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1920px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .header h1 {
+            color: #fff;
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .signal-box {
+            background: #1a1f3a;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 3px solid #2a3654;
+        }
+
+        .signal-box.CALL {
+            border-color: #00ff88;
+            background: linear-gradient(135deg, #1a1f3a 0%, #1a2f2a 100%);
+        }
+
+        .signal-box.PUT {
+            border-color: #ff4444;
+            background: linear-gradient(135deg, #1a1f3a 0%, #2f1a1a 100%);
+        }
+
+        .signal-box.IDLE {
+            border-color: #8b9dc3;
+        }
+
+        .signal-title {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .signal-title.CALL {
+            color: #00ff88;
+        }
+
+        .signal-title.PUT {
+            color: #ff4444;
+        }
+
+        .signal-title.IDLE {
+            color: #8b9dc3;
+        }
+
+        .signal-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .signal-detail {
+            background: #0f1729;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .signal-label {
+            font-size: 11px;
+            color: #8b9dc3;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .signal-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #4a9eff;
+        }
+
+        .controls {
+            background: #1a1f3a;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .control-group label {
+            margin-bottom: 8px;
+            font-size: 11px;
+            color: #8b9dc3;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .control-group select,
+        .control-group button {
+            padding: 12px;
+            border: 2px solid #2a3654;
+            background: #0f1729;
+            color: #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .control-group button {
+            background: linear-gradient(135deg, #4a9eff 0%, #357ab9 100%);
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+        }
+
+        .control-group button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(74, 158, 255, 0.4);
+        }
+
+        .control-group button:disabled {
+            background: #2a3654;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .charts-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .chart-container {
+            background: #1a1f3a;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .chart-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #4a9eff;
+        }
+
+        .chart-status {
+            font-size: 14px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            background: #0f1729;
+        }
+
+        .chart {
+            width: 100%;
+        }
+
+        .analysis-panel {
+            background: #1a1f3a;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .analysis-card {
+            background: #0f1729;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #4a9eff;
+        }
+
+        .analysis-tf {
+            font-size: 14px;
+            color: #8b9dc3;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .analysis-items {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .analysis-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+        }
+
+        .analysis-item-label {
+            color: #8b9dc3;
+        }
+
+        .analysis-item-value {
+            color: #e0e0e0;
+            font-weight: 600;
+        }
+
+        .backtest-results {
+            background: #1a1f3a;
+            padding: 20px;
+            border-radius: 12px;
+        }
+
+        .backtest-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .stat-card {
+            background: #0f1729;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #8b9dc3;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #4a9eff;
+        }
+
+        .stat-value.positive {
+            color: #00ff88;
+        }
+
+        .stat-value.negative {
+            color: #ff4444;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #4a9eff;
+            font-size: 18px;
+        }
+
+        .error {
+            background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .gpu-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: #0f1729;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+
+        .gpu-status.gpu {
+            color: #00ff88;
+        }
+
+        .gpu-status.cpu {
+            color: #ff9500;
+        }
+
+        .trades-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .trades-table th,
+        .trades-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #2a3654;
+        }
+
+        .trades-table th {
+            background: #0f1729;
+            color: #4a9eff;
+            font-weight: 600;
+        }
+
+        .trades-table tr:hover {
+            background: #1a2340;
+        }
+
+        .trade-action.CALL {
+            color: #00ff88;
+            font-weight: 700;
+        }
+
+        .trade-action.PUT {
+            color: #ff4444;
+            font-weight: 700;
+        }
+
+        .trade-outcome.WIN {
+            color: #00ff88;
+        }
+
+        .trade-outcome.LOSS {
+            color: #ff4444;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                📊 MTF Trading Strategy Dashboard
+                <span class="gpu-status" id="gpuStatus">Loading...</span>
+            </h1>
+            <div id="errorContainer"></div>
+        </div>
+
+        <!-- Current Signal -->
+        <div class="signal-box" id="signalBox">
+            <div class="signal-title" id="signalAction">WAITING...</div>
+            <div id="signalReason" style="text-align: center; color: #8b9dc3; margin-bottom: 15px;">Initializing...
+            </div>
+            <div class="signal-details" id="signalDetails"></div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <div class="control-group">
+                <label>Symbol</label>
+                <select id="symbolSelect">
+                    <option value="R_10">Volatility 10 Index</option>
+                    <option value="R_25">Volatility 25 Index</option>
+                    <option value="R_50">Volatility 50 Index</option>
+                    <option value="R_75">Volatility 75 Index</option>
+                    <option value="R_100">Volatility 100 Index</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>HMA Short</label>
+                <input type="number" id="hmaShortInput" value="20" min="2" max="200"
+                    style="padding: 12px; border: 2px solid #2a3654; background: #0f1729; color: #e0e0e0; border-radius: 8px; font-size: 14px;">
+            </div>
+
+            <div class="control-group">
+                <label>HMA Long</label>
+                <input type="number" id="hmaLongInput" value="50" min="5" max="500"
+                    style="padding: 12px; border: 2px solid #2a3654; background: #0f1729; color: #e0e0e0; border-radius: 8px; font-size: 14px;">
+            </div>
+
+            <div class="control-group">
+                <button id="loadDataBtn">📊 Load Data</button>
+            </div>
+
+            <div class="control-group">
+                <button id="analyzeBtn" disabled>🔍 Analyze</button>
+            </div>
+
+            <div class="control-group">
+                <button id="backtestBtn" disabled>🔬 Run Backtest</button>
+            </div>
+
+            <div class="control-group">
+                <button id="startLiveBtn" disabled>▶️ Start Live</button>
+            </div>
+
+            <div class="control-group">
+                <button id="stopLiveBtn" disabled>⏸️ Stop Live</button>
+            </div>
+        </div>
+
+        <!-- Analysis Panel -->
+        <div class="analysis-panel" id="analysisPanel" style="display: none;">
+            <h3 style="margin-bottom: 15px; color: #4a9eff;">📈 Timeframe Analysis</h3>
+            <div class="analysis-grid" id="analysisGrid"></div>
+        </div>
+
+        <!-- Main 2-Column Layout -->
+        <div class="main-layout"
+            style="display: grid; grid-template-columns: 1fr 400px; gap: 20px; align-items: start;">
+            <!-- Left Column: Charts -->
+            <div class="charts-column">
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <div class="chart-title">📈 30M - Trend Direction</div>
+                            <div class="chart-status" id="status30m">Loading...</div>
+                        </div>
+                        <div id="chart30m" class="chart" style="height: 250px;"></div>
+                        <div id="rsi30m" class="chart"
+                            style="height: 100px; margin-top: 5px; border-top: 1px solid #2a3654;"></div>
+                    </div>
+
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <div class="chart-title">📊 15M - Structure</div>
+                            <div class="chart-status" id="status15m">Loading...</div>
+                        </div>
+                        <div id="chart15m" class="chart" style="height: 250px;"></div>
+                        <div id="rsi15m" class="chart"
+                            style="height: 100px; margin-top: 5px; border-top: 1px solid #2a3654;"></div>
+                    </div>
+
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <div class="chart-title">⚡ 1M - Entry Signal</div>
+                            <div class="chart-status" id="status1m">Loading...</div>
+                        </div>
+                        <div id="chart1m" class="chart" style="height: 250px;"></div>
+                        <div id="rsi1m" class="chart"
+                            style="height: 100px; margin-top: 5px; border-top: 1px solid #2a3654;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Analysis Details -->
+            <div class="analysis-column"
+                style="background: #151d2e; border-radius: 12px; padding: 20px; border: 1px solid #2a3654; position: sticky; top: 20px; max-height: 90vh; overflow-y: auto;">
+                <h3 style="margin-bottom: 15px; color: #4a9eff; font-size: 18px;">📋 Quick Decision Table Analysis</h3>
+                <div id="analysisAssetName"
+                    style="margin-bottom: 15px; padding: 8px 12px; background: #0f1729; border-radius: 6px; text-align: center;">
+                    <span style="color: #8b9dc3; font-size: 12px;">ASSET: </span>
+                    <span id="assetNameDisplay" style="color: #ff9500; font-size: 14px; font-weight: bold;">-</span>
+                </div>
+
+                <!-- Current Values -->
+                <div id="currentValues"
+                    style="background: #0f1729; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div style="text-align: center; padding: 10px; background: #1a2340; border-radius: 6px;">
+                            <div style="color: #8b9dc3; font-size: 12px;">30M Trend</div>
+                            <div id="val30mTrend" style="color: #fff; font-size: 16px; font-weight: bold;">-</div>
+                        </div>
+                        <div style="text-align: center; padding: 10px; background: #1a2340; border-radius: 6px;">
+                            <div style="color: #8b9dc3; font-size: 12px;">15M RSI</div>
+                            <div id="val15mRSI" style="color: #fff; font-size: 16px; font-weight: bold;">-</div>
+                        </div>
+                        <div style="text-align: center; padding: 10px; background: #1a2340; border-radius: 6px;">
+                            <div style="color: #8b9dc3; font-size: 12px;">1M RSI</div>
+                            <div id="val1mRSI" style="color: #fff; font-size: 16px; font-weight: bold;">-</div>
+                        </div>
+                        <div style="text-align: center; padding: 10px; background: #1a2340; border-radius: 6px;">
+                            <div style="color: #8b9dc3; font-size: 12px;">Choppiness</div>
+                            <div id="val30mChoppy" style="color: #fff; font-size: 16px; font-weight: bold;">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Decision Table -->
+                <div style="overflow-x: auto;">
+                    <table id="decisionTable" style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                        <thead>
+                            <tr style="background: #1a2340;">
+                                <th style="padding: 8px; border: 1px solid #2a3654; color: #4a9eff;">30M</th>
+                                <th style="padding: 8px; border: 1px solid #2a3654; color: #4a9eff;">15M RSI</th>
+                                <th style="padding: 8px; border: 1px solid #2a3654; color: #4a9eff;">1M RSI</th>
+                                <th style="padding: 8px; border: 1px solid #2a3654; color: #4a9eff;">Action</th>
+                                <th style="padding: 8px; border: 1px solid #2a3654; color: #4a9eff;">Risk</th>
+                            </tr>
+                        </thead>
+                        <tbody id="decisionTableBody">
+                            <tr>
+                                <td colspan="5"
+                                    style="padding: 8px; border: 1px solid #2a3654; color: #8b9dc3; text-align: center;">
+                                    รอข้อมูล...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Matched Rule Details -->
+                <div id="matchedRuleDetails"
+                    style="margin-top: 20px; background: #0f1729; border-radius: 8px; padding: 15px;">
+                    <h4 style="color: #ff9500; margin-bottom: 10px;">🎯 กฎที่ตรงกับสถานการณ์ปัจจุบัน</h4>
+                    <div id="matchedRuleContent" style="color: #e0e0e0; line-height: 1.6;">
+                        กำลังวิเคราะห์...
+                    </div>
+                </div>
+
+                <!-- Entry Checklist -->
+                <div id="entryChecklist"
+                    style="margin-top: 20px; background: #0f1729; border-radius: 8px; padding: 15px;">
+                    <h4 style="color: #00ff88; margin-bottom: 10px;">✅ Checklist ก่อนเข้าเทรด</h4>
+                    <div id="checklistContent" style="color: #e0e0e0; line-height: 1.8; font-size: 13px;">
+                        รอการวิเคราะห์...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Backtest Results -->
+        <div class="backtest-results" id="backtestResults" style="display: none;">
+            <h3 style="margin-bottom: 15px; color: #4a9eff;">🔬 Backtest Results</h3>
+            <div class="backtest-stats" id="backtestStats"></div>
+            <div id="tradesTableContainer"></div>
+        </div>
+    </div>
+
+    <!-- Load scripts -->
+    <script src="https://unpkg.com/lightweight-charts@4.2.1/dist/lightweight-charts.standalone.production.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gpu.js@latest/dist/gpu-browser.min.js"></script>
+
+    <script>
+        window.addEventListener('load', async () => {
+            await new Promise(resolve => setTimeout(resolve, 200));
+
+            const scripts = [
+                'deriv-api.js',
+                'webgpu-indicators.js',
+                'mtf-strategy.js',
+                'mtf-chart-manager.js',
+                'mtf-app.js'
+            ];
+
+            for (const src of scripts) {
+                const script = document.createElement('script');
+                script.src = src;
+                script.async = false;
+                document.body.appendChild(script);
+                await new Promise((resolve, reject) => {
+                    script.onload = resolve;
+                    script.onerror = reject;
+                });
+                console.log(`✅ Loaded: ${src}`);
+            }
+        });
+    </script>
+</body>
+
+</html>
